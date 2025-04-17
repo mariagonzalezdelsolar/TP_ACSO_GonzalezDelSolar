@@ -1,0 +1,104 @@
+1. 
+El código compara el input con un string secreto almacenado en 0x4c9a60
+Para encontrarlo se puede poner un breakpoint en phase_1 y ver x/s 0x4c9a60.
+El string que muestre es el input que se debe ingresar. Si falla la comparación
+con ese string:
+call 4022fa <strings_not_equal> --> chequea si son distintos
+test eax,eax
+jne 401e04 --> explota la bomba
+
+En este caso el string era "Por la libertad, asi como por la honra, se puede y se debe aventurar la vida."
+
+2. 
+Esta fase espera dos números enteros separados por espacio (ej: "X Y")
+Realiza estas comprobaciones en orden:
+
+  a- Ambos números deben ser distintos de cero (test eax,eax)
+      401e75:  mov    eax,ebx         --> Carga primer número (X)
+      401e77:  imul   eax,ebp         --> Multiplica X * Y
+      401e7a:  test   eax,eax         --> Verifica si resultado es cero
+      401e7c:  je     401ea5          --> Si es cero -> EXPLOTA (je = jump if equal)
+
+  b- La suma de ambos debe ser igual a 0x536 (1334 en decimal)
+      401e7e:  add    ebx,ebp         --> Suma X + Y
+      401e80:  cmp    ebx,0x536       --> Compara con 1334
+      401e86:  jne    401eac          --> Si NO es igual -> EXPLOTA (jne = jump if not equal)
+
+  c- Los números deben pasar la función "misterio", que lo que 
+     chequea es que el XOR entre ambos números no debe dar negativo (js 401e21) --> los números ingresados deben tener signo opuesto. 
+      401e8b:  mov    edi,r12d        --> Carga X
+      401e8e:  call   401e0b <misterio> --> Llama a la función
+
+      ; Dentro de "misterio":
+      401e0f:  xor    esi,edi         --> Hace XOR entre X e Y
+      401e11:  js     401e21          --> Si resultado es NEGATIVO -> retorna sin explotar
+                                      ; (pero luego en phase_2 verifica el retorno)
+
+
+3. 
+Esta fase tiene los siguientes requisitos de input:
+- Formato: "palabra número" 
+   402059: call 407510 <__isoc99_sscanf>  --> Parsea el input
+   40205e: cmp eax,0x2                    --> Verifica que haya 2 elementos
+   402061: jne 4020df                      --> Si no -> EXPLOTA
+- La palabra debe estar en 'palabras.txt'
+- El número debe ser igual al resultado de la función cuenta, que hace lo siguiente:
+    - Recorre 'palabras.txt' sumando indices los indices de mid, hasta que encuentra
+      la palabra pasada. Esto se puede ver acá:
+         - sar ebx,1 --> cálculo de mid (división por 2)
+         - mov rsi,[rsi+rax*8] --> acceso al array
+         - call 401140 --> comparación de strings
+         - add ebx,eax --> acumula índices
+
+    Luego de salir de cuneta se hace un chequeo final
+      402089: cmp eax,0x270f       --> Verifica que el resultado sea ≤ 9999 (0x270f)
+      40208e: jle 4020e9           --> Si es mayor -> EXPLOTA
+      402090: cmp DWORD PTR [rsp],ebx  --> Compara con el número ingresado
+      402093: jne 4020f0           --> Si no coinciden -> EXPLOTA
+        
+Para resolver esta fase, lo que hice fue crearme un script de python que simulaba 'cuenta'
+entonces le metí el archivo.txt, para que vaya generando el número palabra por palabra.
+Entonces, cuneta hacía la búsqueda binaria de cada palabra en 'palabras.txt' e iba acumulando
+los índices de mid por los que pasaba. Cuenta me generaba un resultado, que si era menos de 9999,
+entonces yo me guardaba la combinación 'palabra numero' en otro archivo txt. Entonces, aquellos
+eran los inputs válidos.
+
+4.
+Esta fase tenpia como requisito del input que sea una cadena de exactamente 6 caracteres.
+Esta, debpia transformarse en 'chango' al aplicar cierta codificacion.
+
+Así es que hacía esto el código de assembly:
+- Validación Inicial:
+    40213E: cmp rax,0x6       --> Verifica largo = 6
+    402142: je 402149         --> Si no, explode_bomb
+
+- Transformación de caracteres. Para cada caracter:
+    402155: movzx edx,BYTE PTR [rbx+rax*1]  --> Lee caracter
+    402159: and edx,0xf                      --> Toma nibble bajo (0-15)
+    40215C: movzx edx,BYTE PTR [rcx+rdx*1]  --> Busca en tabla
+    402160: mov BYTE PTR [rsp+rax*1+0x1],dl --> Guarda caracter codificado
+
+
+- Comparación final:
+    402178: lea rsi,[rip+0xc4f20]  --> "chango" (en 0x4c709f)
+    40217F: call 401140             --> Compara strings
+    402186: jne 4021A1             --> Si no coincide -> explode_bomb
+
+
+Para resolverlo debí examinar la tabla, poniendo un breakpoint en phase_4 y ejecutando.
+Una vez en la función, examiné la tabla haciendo x/16cb 0x4cde40, que me permitía ver los valores 
+como caracteres ASCII.
+La tabla tenía 16 valores (uno por cada posible valor de 4 bits), y se usaba para transformar cada uno 
+de los 6 primeros caracteres del input.
+Cada carácter del input se pasaba por una operación de máscara & 0xf para quedarse solo con su nibble 
+bajo (los últimos 4 bits), y ese valor se usaba como índice en la tabla.
+El carácter correspondiente en la tabla se almacenaba en un nuevo buffer, que luego se comparaba con la 
+cadena "chango". Para evitar que la bomba explotara, debía encontrar una cadena de 6 caracteres tal que,
+l pasar por este proceso de transformación, se convirtiera exactamente en "chango".
+
+Para automatizar la búsqueda de un input válido, escribí un script en Python. El código invertía la tabla 
+para mapear cada letra de "chango" al índice correspondiente, y luego buscaba caracteres ASCII visibles que, 
+al aplicar & 0xf, dieran ese índice. Finalmente, generaba todas las combinaciones posibles que respetaran esa 
+lógica, y devolvía la primera cadena válida de 6 caracteres. Este script me permitió encontrar un input que cumpla
+todas las condiciones:  6 caracteres, y al transformarse mediante la tabla, produce "chango", desactivando así la bomba.
+
