@@ -1,64 +1,117 @@
 #include "ej1.h"
-//test de commit
 
-string_proc_list* string_proc_list_create(void){
-	string_proc_list* list = (string_proc_list*)malloc(sizeof(string_proc_list));
-	if(list == NULL){
-		return NULL;
-	}
-	list->first = NULL;
-	list->last  = NULL;
-	return list;
+/* 1) Crear una lista vacía */
+string_proc_list* string_proc_list_create(void) {
+    string_proc_list* list = malloc(sizeof *list);
+    if (list == NULL) {
+        return NULL;
+    }
+    list->first = NULL;
+    list->last  = NULL;
+    return list;
 }
 
-string_proc_node* string_proc_node_create(uint8_t type, char* hash){
-	string_proc_node* node = (string_proc_node*)malloc(sizeof(string_proc_node));
-	if(node == NULL){
-		return NULL;
-	}
-	node->next      = NULL;
-	node->previous  = NULL;
-	node->hash      = hash;
-	node->type      = type;			
-	return node;
+/* 2) Crear un nodo apuntando al hash dado */
+string_proc_node* string_proc_node_create(uint8_t type, char* hash) {
+    if (hash == NULL) {
+        return NULL;
+    }
+    string_proc_node* node = malloc(sizeof *node);
+    if (node == NULL) {
+        return NULL;
+    }
+    node->next     = NULL;
+    node->previous = NULL;
+    node->hash     = hash;
+    node->type     = type;
+    return node;
 }
 
-void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
-	string_proc_node* node = string_proc_node_create(type, hash);
-	if(node == NULL){
-		return;
-	}
-	if(list->first == NULL){
-		list->first = node;
-		list->last  = node;
-	}else{
-		list->last->next = node;
-		node->previous   = list->last;
-		list->last      = node;
-	}
+/* 3) Añadir un nodo al final de la lista */
+void string_proc_list_add_node(string_proc_list* list,
+                               uint8_t           type,
+                               char*             hash)
+{
+    if (list == NULL) {
+        return;
+    }
+    string_proc_node* node = string_proc_node_create(type, hash);
+    if (node == NULL) {
+        return;
+    }
+    if (list->first == NULL) {
+        list->first = node;
+        list->last  = node;
+    } else {
+        list->last->next   = node;
+        node->previous     = list->last;
+        list->last         = node;
+    }
 }
 
+/* 4) Concatenar todos los hashes de nodos de un tipo dado */
+char* string_proc_list_concat(string_proc_list* list,
+                              uint8_t           type,
+                              char*             base_hash)
+{
 
-char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash){
-	string_proc_node* current_node = list->first;
-	char* result = NULL;
-	while(current_node != NULL){
-		if(current_node->type == type){
-			if(result == NULL){
-				result = (char*)malloc(strlen(hash) + strlen(current_node->hash) + 1);
-				strcpy(result, hash);
-				strcat(result, current_node->hash);
-			}else{
-				char* temp = str_concat(result, current_node->hash);
-				free(result);
-				result = temp;
-			}
-		}
-		current_node = current_node->next;
-	}
-	return result;	
+    if (list == NULL || base_hash == NULL) {
+        return NULL;
+    }
+
+    string_proc_node* cur    = list->first;
+    char*              result = NULL;
+
+    while (cur) {
+        if (cur->type == type) {
+            size_t part_len = strlen(cur->hash);
+
+            if (result == NULL) {
+                /* primer match: base_hash + cur->hash */
+                size_t base_len = strlen(base_hash);
+                /* evita overflow */
+                if (base_len > SIZE_MAX - part_len - 1) {
+                    return NULL;
+                }
+                result = malloc(base_len + part_len + 1);
+                if (result == NULL) {
+                    return NULL;
+                }
+                memcpy(result,             base_hash, base_len);
+                memcpy(result + base_len,  cur->hash,  part_len);
+                result[base_len + part_len] = '\0';
+            } else {
+                /* match subsiguiente: realloc-like */
+                size_t prev_len = strlen(result);
+                if (prev_len > SIZE_MAX - part_len - 1) {
+                    free(result);
+                    return NULL;
+                }
+                char* tmp = malloc(prev_len + part_len + 1);
+                if (tmp == NULL) {
+                    free(result);
+                    return NULL;
+                }
+                memcpy(tmp,               result,    prev_len);
+                memcpy(tmp + prev_len,   cur->hash, part_len);
+                tmp[prev_len + part_len] = '\0';
+                free(result);
+                result = tmp;
+            }
+        }
+        cur = cur->next;
+    }
+
+    if (result == NULL) {
+        /* ningún match: devolvemos cadena vacía */
+        result = malloc(1);
+        if (result) {
+            result[0] = '\0';
+        }
+    }
+
+    return result;
 }
-
 
 /** AUX FUNCTIONS **/
 
