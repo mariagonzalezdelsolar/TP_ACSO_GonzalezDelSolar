@@ -10,6 +10,7 @@
  */
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     //Implement Code Here
+    // 1. Read the inode from the disk image
     return 0; 
 }
 
