@@ -50,5 +50,5 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return fsize - offset; // Parte del bloque contiene basura, devuelvo solo los bytes válidos.
     }
 
-    return BLOCK_SIZE; // El bloque está completamente dentro del archivo.
+    return DISKIMG_SECTOR_SIZE; // El bloque está completamente dentro del archivo.
 }
