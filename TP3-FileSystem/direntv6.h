@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define DIRENT_NAME_LEN 14
+
 /**
  * The Unix Version 6 code didn't use a structure like this but this is 
  * structure does match for format of a directory entry.
