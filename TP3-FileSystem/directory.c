@@ -23,7 +23,7 @@ int directory_findname(struct unixfilesystem *fs, const char *name, int dirinumb
   }
   // Errores de directorio
   if ((dir_inode.i_mode & IFDIR) == 0) {
-    return -2; // No es un directorio.
+    return -1; // No es un directorio.
   }
 
   char block[BLOCK_SIZE];
@@ -33,7 +33,7 @@ int directory_findname(struct unixfilesystem *fs, const char *name, int dirinumb
   for (int blk = 0; blk < num_blocks; blk++) {
     int bytes_read = file_getblock(fs, dirinumber, blk, block);
     if (bytes_read <= 0) {
-        return -3;
+        return -1;
     }
   
   // Cada bloque contiene varias entradas de directorio.
@@ -48,5 +48,5 @@ int directory_findname(struct unixfilesystem *fs, const char *name, int dirinumb
    }
   }
 
-  return -4; // No se encontró el nombre.
+  return -1; // No se encontró el nombre.
 }
