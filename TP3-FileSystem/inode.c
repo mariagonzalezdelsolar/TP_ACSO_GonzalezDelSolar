@@ -4,6 +4,7 @@
 #include "inode.h"
 #include "diskimg.h"
 
+// Número de direcciones de bloques directas/indirectas en un inodo.
 #define NADDR      8          
 #define NDIRECT    (NADDR - 1) 
 
