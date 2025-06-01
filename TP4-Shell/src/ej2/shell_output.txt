@@ -1,0 +1,18 @@
+Simple Shell - Type 'exit' to quit
+Shell> bash_output.txt
+shell_output.txt
+test.txt
+test10_output.txt
+test11_output.txt
+test12_output.txt
+test1_output.txt
+test2.txt
+test2_output.txt
+test3_output.txt
+test4_output.txt
+test5_output.txt
+test6_output.txt
+test7_output.txt
+test8_output.txt
+test9_output.txt
+Shell> Exiting shell...
