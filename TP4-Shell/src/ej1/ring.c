@@ -6,8 +6,8 @@
 
 
 int main(int argc, char **argv) {
-    // Validación de argumentos
-    if (argc != 4) {
+    // Validación de argumentos --> debe recibir 3 argumentos: num_procesos, valor_inicial, proceso_inicio (4 con el nombre del programa)
+    if (argc != 4) { 
         fprintf(stderr, "Uso: %s <num_procesos> <valor_inicial> <proceso_inicio>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
